@@ -4,6 +4,7 @@ package libemail
 
 import (
 	"net/smtp"
+	"sync"
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
@@ -31,8 +32,12 @@ func NewSMTPAuthMock(t minimock.Tester) *SMTPAuthMock {
 	if controller, ok := t.(minimock.MockController); ok {
 		controller.RegisterMocker(m)
 	}
+
 	m.NextMock = mSMTPAuthMockNext{mock: m}
+	m.NextMock.callArgs = []*SMTPAuthMockNextParams{}
+
 	m.StartMock = mSMTPAuthMockStart{mock: m}
+	m.StartMock.callArgs = []*SMTPAuthMockStartParams{}
 
 	return m
 }
@@ -41,6 +46,9 @@ type mSMTPAuthMockNext struct {
 	mock               *SMTPAuthMock
 	defaultExpectation *SMTPAuthMockNextExpectation
 	expectations       []*SMTPAuthMockNextExpectation
+
+	callArgs []*SMTPAuthMockNextParams
+	mutex    sync.RWMutex
 }
 
 // SMTPAuthMockNextExpectation specifies expectation struct of the SMTPAuth.Next
@@ -64,64 +72,64 @@ type SMTPAuthMockNextResults struct {
 }
 
 // Expect sets up expected params for SMTPAuth.Next
-func (m *mSMTPAuthMockNext) Expect(fromServer []byte, more bool) *mSMTPAuthMockNext {
-	if m.mock.funcNext != nil {
-		m.mock.t.Fatalf("SMTPAuthMock.Next mock is already set by Set")
+func (mmNext *mSMTPAuthMockNext) Expect(fromServer []byte, more bool) *mSMTPAuthMockNext {
+	if mmNext.mock.funcNext != nil {
+		mmNext.mock.t.Fatalf("SMTPAuthMock.Next mock is already set by Set")
 	}
 
-	if m.defaultExpectation == nil {
-		m.defaultExpectation = &SMTPAuthMockNextExpectation{}
+	if mmNext.defaultExpectation == nil {
+		mmNext.defaultExpectation = &SMTPAuthMockNextExpectation{}
 	}
 
-	m.defaultExpectation.params = &SMTPAuthMockNextParams{fromServer, more}
-	for _, e := range m.expectations {
-		if minimock.Equal(e.params, m.defaultExpectation.params) {
-			m.mock.t.Fatalf("Expectation set by When has same params: %#v", *m.defaultExpectation.params)
+	mmNext.defaultExpectation.params = &SMTPAuthMockNextParams{fromServer, more}
+	for _, e := range mmNext.expectations {
+		if minimock.Equal(e.params, mmNext.defaultExpectation.params) {
+			mmNext.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmNext.defaultExpectation.params)
 		}
 	}
 
-	return m
+	return mmNext
 }
 
 // Return sets up results that will be returned by SMTPAuth.Next
-func (m *mSMTPAuthMockNext) Return(toServer []byte, err error) *SMTPAuthMock {
-	if m.mock.funcNext != nil {
-		m.mock.t.Fatalf("SMTPAuthMock.Next mock is already set by Set")
+func (mmNext *mSMTPAuthMockNext) Return(toServer []byte, err error) *SMTPAuthMock {
+	if mmNext.mock.funcNext != nil {
+		mmNext.mock.t.Fatalf("SMTPAuthMock.Next mock is already set by Set")
 	}
 
-	if m.defaultExpectation == nil {
-		m.defaultExpectation = &SMTPAuthMockNextExpectation{mock: m.mock}
+	if mmNext.defaultExpectation == nil {
+		mmNext.defaultExpectation = &SMTPAuthMockNextExpectation{mock: mmNext.mock}
 	}
-	m.defaultExpectation.results = &SMTPAuthMockNextResults{toServer, err}
-	return m.mock
+	mmNext.defaultExpectation.results = &SMTPAuthMockNextResults{toServer, err}
+	return mmNext.mock
 }
 
 //Set uses given function f to mock the SMTPAuth.Next method
-func (m *mSMTPAuthMockNext) Set(f func(fromServer []byte, more bool) (toServer []byte, err error)) *SMTPAuthMock {
-	if m.defaultExpectation != nil {
-		m.mock.t.Fatalf("Default expectation is already set for the SMTPAuth.Next method")
+func (mmNext *mSMTPAuthMockNext) Set(f func(fromServer []byte, more bool) (toServer []byte, err error)) *SMTPAuthMock {
+	if mmNext.defaultExpectation != nil {
+		mmNext.mock.t.Fatalf("Default expectation is already set for the SMTPAuth.Next method")
 	}
 
-	if len(m.expectations) > 0 {
-		m.mock.t.Fatalf("Some expectations are already set for the SMTPAuth.Next method")
+	if len(mmNext.expectations) > 0 {
+		mmNext.mock.t.Fatalf("Some expectations are already set for the SMTPAuth.Next method")
 	}
 
-	m.mock.funcNext = f
-	return m.mock
+	mmNext.mock.funcNext = f
+	return mmNext.mock
 }
 
 // When sets expectation for the SMTPAuth.Next which will trigger the result defined by the following
 // Then helper
-func (m *mSMTPAuthMockNext) When(fromServer []byte, more bool) *SMTPAuthMockNextExpectation {
-	if m.mock.funcNext != nil {
-		m.mock.t.Fatalf("SMTPAuthMock.Next mock is already set by Set")
+func (mmNext *mSMTPAuthMockNext) When(fromServer []byte, more bool) *SMTPAuthMockNextExpectation {
+	if mmNext.mock.funcNext != nil {
+		mmNext.mock.t.Fatalf("SMTPAuthMock.Next mock is already set by Set")
 	}
 
 	expectation := &SMTPAuthMockNextExpectation{
-		mock:   m.mock,
+		mock:   mmNext.mock,
 		params: &SMTPAuthMockNextParams{fromServer, more},
 	}
-	m.expectations = append(m.expectations, expectation)
+	mmNext.expectations = append(mmNext.expectations, expectation)
 	return expectation
 }
 
@@ -132,46 +140,66 @@ func (e *SMTPAuthMockNextExpectation) Then(toServer []byte, err error) *SMTPAuth
 }
 
 // Next implements SMTPAuth
-func (m *SMTPAuthMock) Next(fromServer []byte, more bool) (toServer []byte, err error) {
-	mm_atomic.AddUint64(&m.beforeNextCounter, 1)
-	defer mm_atomic.AddUint64(&m.afterNextCounter, 1)
+func (mmNext *SMTPAuthMock) Next(fromServer []byte, more bool) (toServer []byte, err error) {
+	mm_atomic.AddUint64(&mmNext.beforeNextCounter, 1)
+	defer mm_atomic.AddUint64(&mmNext.afterNextCounter, 1)
 
-	for _, e := range m.NextMock.expectations {
-		if minimock.Equal(*e.params, SMTPAuthMockNextParams{fromServer, more}) {
+	params := &SMTPAuthMockNextParams{fromServer, more}
+
+	// Record call args
+	mmNext.NextMock.mutex.Lock()
+	mmNext.NextMock.callArgs = append(mmNext.NextMock.callArgs, params)
+	mmNext.NextMock.mutex.Unlock()
+
+	for _, e := range mmNext.NextMock.expectations {
+		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.toServer, e.results.err
 		}
 	}
 
-	if m.NextMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&m.NextMock.defaultExpectation.Counter, 1)
-		want := m.NextMock.defaultExpectation.params
+	if mmNext.NextMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmNext.NextMock.defaultExpectation.Counter, 1)
+		want := mmNext.NextMock.defaultExpectation.params
 		got := SMTPAuthMockNextParams{fromServer, more}
 		if want != nil && !minimock.Equal(*want, got) {
-			m.t.Errorf("SMTPAuthMock.Next got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+			mmNext.t.Errorf("SMTPAuthMock.Next got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
 
-		results := m.NextMock.defaultExpectation.results
+		results := mmNext.NextMock.defaultExpectation.results
 		if results == nil {
-			m.t.Fatal("No results are set for the SMTPAuthMock.Next")
+			mmNext.t.Fatal("No results are set for the SMTPAuthMock.Next")
 		}
 		return (*results).toServer, (*results).err
 	}
-	if m.funcNext != nil {
-		return m.funcNext(fromServer, more)
+	if mmNext.funcNext != nil {
+		return mmNext.funcNext(fromServer, more)
 	}
-	m.t.Fatalf("Unexpected call to SMTPAuthMock.Next. %v %v", fromServer, more)
+	mmNext.t.Fatalf("Unexpected call to SMTPAuthMock.Next. %v %v", fromServer, more)
 	return
 }
 
 // NextAfterCounter returns a count of finished SMTPAuthMock.Next invocations
-func (m *SMTPAuthMock) NextAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&m.afterNextCounter)
+func (mmNext *SMTPAuthMock) NextAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmNext.afterNextCounter)
 }
 
 // NextBeforeCounter returns a count of SMTPAuthMock.Next invocations
-func (m *SMTPAuthMock) NextBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&m.beforeNextCounter)
+func (mmNext *SMTPAuthMock) NextBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmNext.beforeNextCounter)
+}
+
+// Calls returns a list of arguments used in each call to SMTPAuthMock.Next.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmNext *mSMTPAuthMockNext) Calls() []*SMTPAuthMockNextParams {
+	mmNext.mutex.RLock()
+
+	argCopy := make([]*SMTPAuthMockNextParams, len(mmNext.callArgs))
+	copy(argCopy, mmNext.callArgs)
+
+	mmNext.mutex.RUnlock()
+
+	return argCopy
 }
 
 // MinimockNextDone returns true if the count of the Next invocations corresponds
@@ -220,6 +248,9 @@ type mSMTPAuthMockStart struct {
 	mock               *SMTPAuthMock
 	defaultExpectation *SMTPAuthMockStartExpectation
 	expectations       []*SMTPAuthMockStartExpectation
+
+	callArgs []*SMTPAuthMockStartParams
+	mutex    sync.RWMutex
 }
 
 // SMTPAuthMockStartExpectation specifies expectation struct of the SMTPAuth.Start
@@ -243,64 +274,64 @@ type SMTPAuthMockStartResults struct {
 }
 
 // Expect sets up expected params for SMTPAuth.Start
-func (m *mSMTPAuthMockStart) Expect(server *smtp.ServerInfo) *mSMTPAuthMockStart {
-	if m.mock.funcStart != nil {
-		m.mock.t.Fatalf("SMTPAuthMock.Start mock is already set by Set")
+func (mmStart *mSMTPAuthMockStart) Expect(server *smtp.ServerInfo) *mSMTPAuthMockStart {
+	if mmStart.mock.funcStart != nil {
+		mmStart.mock.t.Fatalf("SMTPAuthMock.Start mock is already set by Set")
 	}
 
-	if m.defaultExpectation == nil {
-		m.defaultExpectation = &SMTPAuthMockStartExpectation{}
+	if mmStart.defaultExpectation == nil {
+		mmStart.defaultExpectation = &SMTPAuthMockStartExpectation{}
 	}
 
-	m.defaultExpectation.params = &SMTPAuthMockStartParams{server}
-	for _, e := range m.expectations {
-		if minimock.Equal(e.params, m.defaultExpectation.params) {
-			m.mock.t.Fatalf("Expectation set by When has same params: %#v", *m.defaultExpectation.params)
+	mmStart.defaultExpectation.params = &SMTPAuthMockStartParams{server}
+	for _, e := range mmStart.expectations {
+		if minimock.Equal(e.params, mmStart.defaultExpectation.params) {
+			mmStart.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmStart.defaultExpectation.params)
 		}
 	}
 
-	return m
+	return mmStart
 }
 
 // Return sets up results that will be returned by SMTPAuth.Start
-func (m *mSMTPAuthMockStart) Return(proto string, toServer []byte, err error) *SMTPAuthMock {
-	if m.mock.funcStart != nil {
-		m.mock.t.Fatalf("SMTPAuthMock.Start mock is already set by Set")
+func (mmStart *mSMTPAuthMockStart) Return(proto string, toServer []byte, err error) *SMTPAuthMock {
+	if mmStart.mock.funcStart != nil {
+		mmStart.mock.t.Fatalf("SMTPAuthMock.Start mock is already set by Set")
 	}
 
-	if m.defaultExpectation == nil {
-		m.defaultExpectation = &SMTPAuthMockStartExpectation{mock: m.mock}
+	if mmStart.defaultExpectation == nil {
+		mmStart.defaultExpectation = &SMTPAuthMockStartExpectation{mock: mmStart.mock}
 	}
-	m.defaultExpectation.results = &SMTPAuthMockStartResults{proto, toServer, err}
-	return m.mock
+	mmStart.defaultExpectation.results = &SMTPAuthMockStartResults{proto, toServer, err}
+	return mmStart.mock
 }
 
 //Set uses given function f to mock the SMTPAuth.Start method
-func (m *mSMTPAuthMockStart) Set(f func(server *smtp.ServerInfo) (proto string, toServer []byte, err error)) *SMTPAuthMock {
-	if m.defaultExpectation != nil {
-		m.mock.t.Fatalf("Default expectation is already set for the SMTPAuth.Start method")
+func (mmStart *mSMTPAuthMockStart) Set(f func(server *smtp.ServerInfo) (proto string, toServer []byte, err error)) *SMTPAuthMock {
+	if mmStart.defaultExpectation != nil {
+		mmStart.mock.t.Fatalf("Default expectation is already set for the SMTPAuth.Start method")
 	}
 
-	if len(m.expectations) > 0 {
-		m.mock.t.Fatalf("Some expectations are already set for the SMTPAuth.Start method")
+	if len(mmStart.expectations) > 0 {
+		mmStart.mock.t.Fatalf("Some expectations are already set for the SMTPAuth.Start method")
 	}
 
-	m.mock.funcStart = f
-	return m.mock
+	mmStart.mock.funcStart = f
+	return mmStart.mock
 }
 
 // When sets expectation for the SMTPAuth.Start which will trigger the result defined by the following
 // Then helper
-func (m *mSMTPAuthMockStart) When(server *smtp.ServerInfo) *SMTPAuthMockStartExpectation {
-	if m.mock.funcStart != nil {
-		m.mock.t.Fatalf("SMTPAuthMock.Start mock is already set by Set")
+func (mmStart *mSMTPAuthMockStart) When(server *smtp.ServerInfo) *SMTPAuthMockStartExpectation {
+	if mmStart.mock.funcStart != nil {
+		mmStart.mock.t.Fatalf("SMTPAuthMock.Start mock is already set by Set")
 	}
 
 	expectation := &SMTPAuthMockStartExpectation{
-		mock:   m.mock,
+		mock:   mmStart.mock,
 		params: &SMTPAuthMockStartParams{server},
 	}
-	m.expectations = append(m.expectations, expectation)
+	mmStart.expectations = append(mmStart.expectations, expectation)
 	return expectation
 }
 
@@ -311,46 +342,66 @@ func (e *SMTPAuthMockStartExpectation) Then(proto string, toServer []byte, err e
 }
 
 // Start implements SMTPAuth
-func (m *SMTPAuthMock) Start(server *smtp.ServerInfo) (proto string, toServer []byte, err error) {
-	mm_atomic.AddUint64(&m.beforeStartCounter, 1)
-	defer mm_atomic.AddUint64(&m.afterStartCounter, 1)
+func (mmStart *SMTPAuthMock) Start(server *smtp.ServerInfo) (proto string, toServer []byte, err error) {
+	mm_atomic.AddUint64(&mmStart.beforeStartCounter, 1)
+	defer mm_atomic.AddUint64(&mmStart.afterStartCounter, 1)
 
-	for _, e := range m.StartMock.expectations {
-		if minimock.Equal(*e.params, SMTPAuthMockStartParams{server}) {
+	params := &SMTPAuthMockStartParams{server}
+
+	// Record call args
+	mmStart.StartMock.mutex.Lock()
+	mmStart.StartMock.callArgs = append(mmStart.StartMock.callArgs, params)
+	mmStart.StartMock.mutex.Unlock()
+
+	for _, e := range mmStart.StartMock.expectations {
+		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.proto, e.results.toServer, e.results.err
 		}
 	}
 
-	if m.StartMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&m.StartMock.defaultExpectation.Counter, 1)
-		want := m.StartMock.defaultExpectation.params
+	if mmStart.StartMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmStart.StartMock.defaultExpectation.Counter, 1)
+		want := mmStart.StartMock.defaultExpectation.params
 		got := SMTPAuthMockStartParams{server}
 		if want != nil && !minimock.Equal(*want, got) {
-			m.t.Errorf("SMTPAuthMock.Start got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+			mmStart.t.Errorf("SMTPAuthMock.Start got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
 
-		results := m.StartMock.defaultExpectation.results
+		results := mmStart.StartMock.defaultExpectation.results
 		if results == nil {
-			m.t.Fatal("No results are set for the SMTPAuthMock.Start")
+			mmStart.t.Fatal("No results are set for the SMTPAuthMock.Start")
 		}
 		return (*results).proto, (*results).toServer, (*results).err
 	}
-	if m.funcStart != nil {
-		return m.funcStart(server)
+	if mmStart.funcStart != nil {
+		return mmStart.funcStart(server)
 	}
-	m.t.Fatalf("Unexpected call to SMTPAuthMock.Start. %v", server)
+	mmStart.t.Fatalf("Unexpected call to SMTPAuthMock.Start. %v", server)
 	return
 }
 
 // StartAfterCounter returns a count of finished SMTPAuthMock.Start invocations
-func (m *SMTPAuthMock) StartAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&m.afterStartCounter)
+func (mmStart *SMTPAuthMock) StartAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmStart.afterStartCounter)
 }
 
 // StartBeforeCounter returns a count of SMTPAuthMock.Start invocations
-func (m *SMTPAuthMock) StartBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&m.beforeStartCounter)
+func (mmStart *SMTPAuthMock) StartBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmStart.beforeStartCounter)
+}
+
+// Calls returns a list of arguments used in each call to SMTPAuthMock.Start.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmStart *mSMTPAuthMockStart) Calls() []*SMTPAuthMockStartParams {
+	mmStart.mutex.RLock()
+
+	argCopy := make([]*SMTPAuthMockStartParams, len(mmStart.callArgs))
+	copy(argCopy, mmStart.callArgs)
+
+	mmStart.mutex.RUnlock()
+
+	return argCopy
 }
 
 // MinimockStartDone returns true if the count of the Start invocations corresponds

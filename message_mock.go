@@ -35,8 +35,11 @@ func NewMessageMock(t minimock.Tester) *MessageMock {
 	if controller, ok := t.(minimock.MockController); ok {
 		controller.RegisterMocker(m)
 	}
+
 	m.CompileMock = mMessageMockCompile{mock: m}
+
 	m.RecipientsMock = mMessageMockRecipients{mock: m}
+
 	m.SenderMock = mMessageMockSender{mock: m}
 
 	return m
@@ -63,74 +66,74 @@ type MessageMockCompileResults struct {
 }
 
 // Expect sets up expected params for Message.Compile
-func (m *mMessageMockCompile) Expect() *mMessageMockCompile {
-	if m.mock.funcCompile != nil {
-		m.mock.t.Fatalf("MessageMock.Compile mock is already set by Set")
+func (mmCompile *mMessageMockCompile) Expect() *mMessageMockCompile {
+	if mmCompile.mock.funcCompile != nil {
+		mmCompile.mock.t.Fatalf("MessageMock.Compile mock is already set by Set")
 	}
 
-	if m.defaultExpectation == nil {
-		m.defaultExpectation = &MessageMockCompileExpectation{}
+	if mmCompile.defaultExpectation == nil {
+		mmCompile.defaultExpectation = &MessageMockCompileExpectation{}
 	}
 
-	return m
+	return mmCompile
 }
 
 // Return sets up results that will be returned by Message.Compile
-func (m *mMessageMockCompile) Return(ba1 []byte, err error) *MessageMock {
-	if m.mock.funcCompile != nil {
-		m.mock.t.Fatalf("MessageMock.Compile mock is already set by Set")
+func (mmCompile *mMessageMockCompile) Return(ba1 []byte, err error) *MessageMock {
+	if mmCompile.mock.funcCompile != nil {
+		mmCompile.mock.t.Fatalf("MessageMock.Compile mock is already set by Set")
 	}
 
-	if m.defaultExpectation == nil {
-		m.defaultExpectation = &MessageMockCompileExpectation{mock: m.mock}
+	if mmCompile.defaultExpectation == nil {
+		mmCompile.defaultExpectation = &MessageMockCompileExpectation{mock: mmCompile.mock}
 	}
-	m.defaultExpectation.results = &MessageMockCompileResults{ba1, err}
-	return m.mock
+	mmCompile.defaultExpectation.results = &MessageMockCompileResults{ba1, err}
+	return mmCompile.mock
 }
 
 //Set uses given function f to mock the Message.Compile method
-func (m *mMessageMockCompile) Set(f func() (ba1 []byte, err error)) *MessageMock {
-	if m.defaultExpectation != nil {
-		m.mock.t.Fatalf("Default expectation is already set for the Message.Compile method")
+func (mmCompile *mMessageMockCompile) Set(f func() (ba1 []byte, err error)) *MessageMock {
+	if mmCompile.defaultExpectation != nil {
+		mmCompile.mock.t.Fatalf("Default expectation is already set for the Message.Compile method")
 	}
 
-	if len(m.expectations) > 0 {
-		m.mock.t.Fatalf("Some expectations are already set for the Message.Compile method")
+	if len(mmCompile.expectations) > 0 {
+		mmCompile.mock.t.Fatalf("Some expectations are already set for the Message.Compile method")
 	}
 
-	m.mock.funcCompile = f
-	return m.mock
+	mmCompile.mock.funcCompile = f
+	return mmCompile.mock
 }
 
 // Compile implements Message
-func (m *MessageMock) Compile() (ba1 []byte, err error) {
-	mm_atomic.AddUint64(&m.beforeCompileCounter, 1)
-	defer mm_atomic.AddUint64(&m.afterCompileCounter, 1)
+func (mmCompile *MessageMock) Compile() (ba1 []byte, err error) {
+	mm_atomic.AddUint64(&mmCompile.beforeCompileCounter, 1)
+	defer mm_atomic.AddUint64(&mmCompile.afterCompileCounter, 1)
 
-	if m.CompileMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&m.CompileMock.defaultExpectation.Counter, 1)
+	if mmCompile.CompileMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmCompile.CompileMock.defaultExpectation.Counter, 1)
 
-		results := m.CompileMock.defaultExpectation.results
+		results := mmCompile.CompileMock.defaultExpectation.results
 		if results == nil {
-			m.t.Fatal("No results are set for the MessageMock.Compile")
+			mmCompile.t.Fatal("No results are set for the MessageMock.Compile")
 		}
 		return (*results).ba1, (*results).err
 	}
-	if m.funcCompile != nil {
-		return m.funcCompile()
+	if mmCompile.funcCompile != nil {
+		return mmCompile.funcCompile()
 	}
-	m.t.Fatalf("Unexpected call to MessageMock.Compile.")
+	mmCompile.t.Fatalf("Unexpected call to MessageMock.Compile.")
 	return
 }
 
 // CompileAfterCounter returns a count of finished MessageMock.Compile invocations
-func (m *MessageMock) CompileAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&m.afterCompileCounter)
+func (mmCompile *MessageMock) CompileAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmCompile.afterCompileCounter)
 }
 
 // CompileBeforeCounter returns a count of MessageMock.Compile invocations
-func (m *MessageMock) CompileBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&m.beforeCompileCounter)
+func (mmCompile *MessageMock) CompileBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmCompile.beforeCompileCounter)
 }
 
 // MinimockCompileDone returns true if the count of the Compile invocations corresponds
@@ -191,74 +194,74 @@ type MessageMockRecipientsResults struct {
 }
 
 // Expect sets up expected params for Message.Recipients
-func (m *mMessageMockRecipients) Expect() *mMessageMockRecipients {
-	if m.mock.funcRecipients != nil {
-		m.mock.t.Fatalf("MessageMock.Recipients mock is already set by Set")
+func (mmRecipients *mMessageMockRecipients) Expect() *mMessageMockRecipients {
+	if mmRecipients.mock.funcRecipients != nil {
+		mmRecipients.mock.t.Fatalf("MessageMock.Recipients mock is already set by Set")
 	}
 
-	if m.defaultExpectation == nil {
-		m.defaultExpectation = &MessageMockRecipientsExpectation{}
+	if mmRecipients.defaultExpectation == nil {
+		mmRecipients.defaultExpectation = &MessageMockRecipientsExpectation{}
 	}
 
-	return m
+	return mmRecipients
 }
 
 // Return sets up results that will be returned by Message.Recipients
-func (m *mMessageMockRecipients) Return(sa1 []string) *MessageMock {
-	if m.mock.funcRecipients != nil {
-		m.mock.t.Fatalf("MessageMock.Recipients mock is already set by Set")
+func (mmRecipients *mMessageMockRecipients) Return(sa1 []string) *MessageMock {
+	if mmRecipients.mock.funcRecipients != nil {
+		mmRecipients.mock.t.Fatalf("MessageMock.Recipients mock is already set by Set")
 	}
 
-	if m.defaultExpectation == nil {
-		m.defaultExpectation = &MessageMockRecipientsExpectation{mock: m.mock}
+	if mmRecipients.defaultExpectation == nil {
+		mmRecipients.defaultExpectation = &MessageMockRecipientsExpectation{mock: mmRecipients.mock}
 	}
-	m.defaultExpectation.results = &MessageMockRecipientsResults{sa1}
-	return m.mock
+	mmRecipients.defaultExpectation.results = &MessageMockRecipientsResults{sa1}
+	return mmRecipients.mock
 }
 
 //Set uses given function f to mock the Message.Recipients method
-func (m *mMessageMockRecipients) Set(f func() (sa1 []string)) *MessageMock {
-	if m.defaultExpectation != nil {
-		m.mock.t.Fatalf("Default expectation is already set for the Message.Recipients method")
+func (mmRecipients *mMessageMockRecipients) Set(f func() (sa1 []string)) *MessageMock {
+	if mmRecipients.defaultExpectation != nil {
+		mmRecipients.mock.t.Fatalf("Default expectation is already set for the Message.Recipients method")
 	}
 
-	if len(m.expectations) > 0 {
-		m.mock.t.Fatalf("Some expectations are already set for the Message.Recipients method")
+	if len(mmRecipients.expectations) > 0 {
+		mmRecipients.mock.t.Fatalf("Some expectations are already set for the Message.Recipients method")
 	}
 
-	m.mock.funcRecipients = f
-	return m.mock
+	mmRecipients.mock.funcRecipients = f
+	return mmRecipients.mock
 }
 
 // Recipients implements Message
-func (m *MessageMock) Recipients() (sa1 []string) {
-	mm_atomic.AddUint64(&m.beforeRecipientsCounter, 1)
-	defer mm_atomic.AddUint64(&m.afterRecipientsCounter, 1)
+func (mmRecipients *MessageMock) Recipients() (sa1 []string) {
+	mm_atomic.AddUint64(&mmRecipients.beforeRecipientsCounter, 1)
+	defer mm_atomic.AddUint64(&mmRecipients.afterRecipientsCounter, 1)
 
-	if m.RecipientsMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&m.RecipientsMock.defaultExpectation.Counter, 1)
+	if mmRecipients.RecipientsMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmRecipients.RecipientsMock.defaultExpectation.Counter, 1)
 
-		results := m.RecipientsMock.defaultExpectation.results
+		results := mmRecipients.RecipientsMock.defaultExpectation.results
 		if results == nil {
-			m.t.Fatal("No results are set for the MessageMock.Recipients")
+			mmRecipients.t.Fatal("No results are set for the MessageMock.Recipients")
 		}
 		return (*results).sa1
 	}
-	if m.funcRecipients != nil {
-		return m.funcRecipients()
+	if mmRecipients.funcRecipients != nil {
+		return mmRecipients.funcRecipients()
 	}
-	m.t.Fatalf("Unexpected call to MessageMock.Recipients.")
+	mmRecipients.t.Fatalf("Unexpected call to MessageMock.Recipients.")
 	return
 }
 
 // RecipientsAfterCounter returns a count of finished MessageMock.Recipients invocations
-func (m *MessageMock) RecipientsAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&m.afterRecipientsCounter)
+func (mmRecipients *MessageMock) RecipientsAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmRecipients.afterRecipientsCounter)
 }
 
 // RecipientsBeforeCounter returns a count of MessageMock.Recipients invocations
-func (m *MessageMock) RecipientsBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&m.beforeRecipientsCounter)
+func (mmRecipients *MessageMock) RecipientsBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmRecipients.beforeRecipientsCounter)
 }
 
 // MinimockRecipientsDone returns true if the count of the Recipients invocations corresponds
@@ -319,74 +322,74 @@ type MessageMockSenderResults struct {
 }
 
 // Expect sets up expected params for Message.Sender
-func (m *mMessageMockSender) Expect() *mMessageMockSender {
-	if m.mock.funcSender != nil {
-		m.mock.t.Fatalf("MessageMock.Sender mock is already set by Set")
+func (mmSender *mMessageMockSender) Expect() *mMessageMockSender {
+	if mmSender.mock.funcSender != nil {
+		mmSender.mock.t.Fatalf("MessageMock.Sender mock is already set by Set")
 	}
 
-	if m.defaultExpectation == nil {
-		m.defaultExpectation = &MessageMockSenderExpectation{}
+	if mmSender.defaultExpectation == nil {
+		mmSender.defaultExpectation = &MessageMockSenderExpectation{}
 	}
 
-	return m
+	return mmSender
 }
 
 // Return sets up results that will be returned by Message.Sender
-func (m *mMessageMockSender) Return(s1 string) *MessageMock {
-	if m.mock.funcSender != nil {
-		m.mock.t.Fatalf("MessageMock.Sender mock is already set by Set")
+func (mmSender *mMessageMockSender) Return(s1 string) *MessageMock {
+	if mmSender.mock.funcSender != nil {
+		mmSender.mock.t.Fatalf("MessageMock.Sender mock is already set by Set")
 	}
 
-	if m.defaultExpectation == nil {
-		m.defaultExpectation = &MessageMockSenderExpectation{mock: m.mock}
+	if mmSender.defaultExpectation == nil {
+		mmSender.defaultExpectation = &MessageMockSenderExpectation{mock: mmSender.mock}
 	}
-	m.defaultExpectation.results = &MessageMockSenderResults{s1}
-	return m.mock
+	mmSender.defaultExpectation.results = &MessageMockSenderResults{s1}
+	return mmSender.mock
 }
 
 //Set uses given function f to mock the Message.Sender method
-func (m *mMessageMockSender) Set(f func() (s1 string)) *MessageMock {
-	if m.defaultExpectation != nil {
-		m.mock.t.Fatalf("Default expectation is already set for the Message.Sender method")
+func (mmSender *mMessageMockSender) Set(f func() (s1 string)) *MessageMock {
+	if mmSender.defaultExpectation != nil {
+		mmSender.mock.t.Fatalf("Default expectation is already set for the Message.Sender method")
 	}
 
-	if len(m.expectations) > 0 {
-		m.mock.t.Fatalf("Some expectations are already set for the Message.Sender method")
+	if len(mmSender.expectations) > 0 {
+		mmSender.mock.t.Fatalf("Some expectations are already set for the Message.Sender method")
 	}
 
-	m.mock.funcSender = f
-	return m.mock
+	mmSender.mock.funcSender = f
+	return mmSender.mock
 }
 
 // Sender implements Message
-func (m *MessageMock) Sender() (s1 string) {
-	mm_atomic.AddUint64(&m.beforeSenderCounter, 1)
-	defer mm_atomic.AddUint64(&m.afterSenderCounter, 1)
+func (mmSender *MessageMock) Sender() (s1 string) {
+	mm_atomic.AddUint64(&mmSender.beforeSenderCounter, 1)
+	defer mm_atomic.AddUint64(&mmSender.afterSenderCounter, 1)
 
-	if m.SenderMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&m.SenderMock.defaultExpectation.Counter, 1)
+	if mmSender.SenderMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmSender.SenderMock.defaultExpectation.Counter, 1)
 
-		results := m.SenderMock.defaultExpectation.results
+		results := mmSender.SenderMock.defaultExpectation.results
 		if results == nil {
-			m.t.Fatal("No results are set for the MessageMock.Sender")
+			mmSender.t.Fatal("No results are set for the MessageMock.Sender")
 		}
 		return (*results).s1
 	}
-	if m.funcSender != nil {
-		return m.funcSender()
+	if mmSender.funcSender != nil {
+		return mmSender.funcSender()
 	}
-	m.t.Fatalf("Unexpected call to MessageMock.Sender.")
+	mmSender.t.Fatalf("Unexpected call to MessageMock.Sender.")
 	return
 }
 
 // SenderAfterCounter returns a count of finished MessageMock.Sender invocations
-func (m *MessageMock) SenderAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&m.afterSenderCounter)
+func (mmSender *MessageMock) SenderAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmSender.afterSenderCounter)
 }
 
 // SenderBeforeCounter returns a count of MessageMock.Sender invocations
-func (m *MessageMock) SenderBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&m.beforeSenderCounter)
+func (mmSender *MessageMock) SenderBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmSender.beforeSenderCounter)
 }
 
 // MinimockSenderDone returns true if the count of the Sender invocations corresponds

@@ -1,6 +1,6 @@
 // Package libemail provides utilities for composing plaintext or HTML email
 // messages with attachments that can be sent through a typical SMTP server.
-package libemail
+package libemail // import "oss.indeed.com/go/libemail"
 
 import (
 	"net/smtp"
