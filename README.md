@@ -1,7 +1,11 @@
 libemail
 ========
 
+[![Go Report Card](https://goreportcard.com/badge/oss.indeed.com/go/libemail)](https://goreportcard.com/report/oss.indeed.com/go/libemail)
+[![Build Status](https://travis-ci.org/indeedeng/libemail.svg?branch=master)](https://travis-ci.org/indeedeng/libemail)
+[![GoDoc](https://godoc.org/oss.indeed.com/go/libemail?status.svg)](https://godoc.org/oss.indeed.com/go/libemail)
 [![NetflixOSS Lifecycle](https://img.shields.io/osslifecycle/indeedeng/libemail.svg)](OSSMETADATA)
+[![GitHub](https://img.shields.io/github/license/indeedeng/libemail.svg)](LICENSE)
 
 # Project Overview
 
