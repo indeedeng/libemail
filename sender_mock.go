@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // SenderMock implements Sender
@@ -15,6 +15,7 @@ type SenderMock struct {
 	t minimock.Tester
 
 	funcSend          func(m1 Message) (err error)
+	inspectFuncSend   func(m1 Message)
 	afterSendCounter  uint64
 	beforeSendCounter uint64
 	SendMock          mSenderMockSend
@@ -80,6 +81,17 @@ func (mmSend *mSenderMockSend) Expect(m1 Message) *mSenderMockSend {
 	return mmSend
 }
 
+// Inspect accepts an inspector function that has same arguments as the Sender.Send
+func (mmSend *mSenderMockSend) Inspect(f func(m1 Message)) *mSenderMockSend {
+	if mmSend.mock.inspectFuncSend != nil {
+		mmSend.mock.t.Fatalf("Inspect function is already set for SenderMock.Send")
+	}
+
+	mmSend.mock.inspectFuncSend = f
+
+	return mmSend
+}
+
 // Return sets up results that will be returned by Sender.Send
 func (mmSend *mSenderMockSend) Return(err error) *SenderMock {
 	if mmSend.mock.funcSend != nil {
@@ -133,15 +145,19 @@ func (mmSend *SenderMock) Send(m1 Message) (err error) {
 	mm_atomic.AddUint64(&mmSend.beforeSendCounter, 1)
 	defer mm_atomic.AddUint64(&mmSend.afterSendCounter, 1)
 
-	params := &SenderMockSendParams{m1}
+	if mmSend.inspectFuncSend != nil {
+		mmSend.inspectFuncSend(m1)
+	}
+
+	mm_params := &SenderMockSendParams{m1}
 
 	// Record call args
 	mmSend.SendMock.mutex.Lock()
-	mmSend.SendMock.callArgs = append(mmSend.SendMock.callArgs, params)
+	mmSend.SendMock.callArgs = append(mmSend.SendMock.callArgs, mm_params)
 	mmSend.SendMock.mutex.Unlock()
 
 	for _, e := range mmSend.SendMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -149,17 +165,17 @@ func (mmSend *SenderMock) Send(m1 Message) (err error) {
 
 	if mmSend.SendMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSend.SendMock.defaultExpectation.Counter, 1)
-		want := mmSend.SendMock.defaultExpectation.params
-		got := SenderMockSendParams{m1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSend.t.Errorf("SenderMock.Send got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSend.SendMock.defaultExpectation.params
+		mm_got := SenderMockSendParams{m1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSend.t.Errorf("SenderMock.Send got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSend.SendMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSend.SendMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSend.t.Fatal("No results are set for the SenderMock.Send")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmSend.funcSend != nil {
 		return mmSend.funcSend(m1)

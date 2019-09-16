@@ -6,7 +6,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // MessageMock implements Message
@@ -14,16 +14,19 @@ type MessageMock struct {
 	t minimock.Tester
 
 	funcCompile          func() (ba1 []byte, err error)
+	inspectFuncCompile   func()
 	afterCompileCounter  uint64
 	beforeCompileCounter uint64
 	CompileMock          mMessageMockCompile
 
 	funcRecipients          func() (sa1 []string)
+	inspectFuncRecipients   func()
 	afterRecipientsCounter  uint64
 	beforeRecipientsCounter uint64
 	RecipientsMock          mMessageMockRecipients
 
 	funcSender          func() (s1 string)
+	inspectFuncSender   func()
 	afterSenderCounter  uint64
 	beforeSenderCounter uint64
 	SenderMock          mMessageMockSender
@@ -78,6 +81,17 @@ func (mmCompile *mMessageMockCompile) Expect() *mMessageMockCompile {
 	return mmCompile
 }
 
+// Inspect accepts an inspector function that has same arguments as the Message.Compile
+func (mmCompile *mMessageMockCompile) Inspect(f func()) *mMessageMockCompile {
+	if mmCompile.mock.inspectFuncCompile != nil {
+		mmCompile.mock.t.Fatalf("Inspect function is already set for MessageMock.Compile")
+	}
+
+	mmCompile.mock.inspectFuncCompile = f
+
+	return mmCompile
+}
+
 // Return sets up results that will be returned by Message.Compile
 func (mmCompile *mMessageMockCompile) Return(ba1 []byte, err error) *MessageMock {
 	if mmCompile.mock.funcCompile != nil {
@@ -110,14 +124,18 @@ func (mmCompile *MessageMock) Compile() (ba1 []byte, err error) {
 	mm_atomic.AddUint64(&mmCompile.beforeCompileCounter, 1)
 	defer mm_atomic.AddUint64(&mmCompile.afterCompileCounter, 1)
 
+	if mmCompile.inspectFuncCompile != nil {
+		mmCompile.inspectFuncCompile()
+	}
+
 	if mmCompile.CompileMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCompile.CompileMock.defaultExpectation.Counter, 1)
 
-		results := mmCompile.CompileMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCompile.CompileMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCompile.t.Fatal("No results are set for the MessageMock.Compile")
 		}
-		return (*results).ba1, (*results).err
+		return (*mm_results).ba1, (*mm_results).err
 	}
 	if mmCompile.funcCompile != nil {
 		return mmCompile.funcCompile()
@@ -206,6 +224,17 @@ func (mmRecipients *mMessageMockRecipients) Expect() *mMessageMockRecipients {
 	return mmRecipients
 }
 
+// Inspect accepts an inspector function that has same arguments as the Message.Recipients
+func (mmRecipients *mMessageMockRecipients) Inspect(f func()) *mMessageMockRecipients {
+	if mmRecipients.mock.inspectFuncRecipients != nil {
+		mmRecipients.mock.t.Fatalf("Inspect function is already set for MessageMock.Recipients")
+	}
+
+	mmRecipients.mock.inspectFuncRecipients = f
+
+	return mmRecipients
+}
+
 // Return sets up results that will be returned by Message.Recipients
 func (mmRecipients *mMessageMockRecipients) Return(sa1 []string) *MessageMock {
 	if mmRecipients.mock.funcRecipients != nil {
@@ -238,14 +267,18 @@ func (mmRecipients *MessageMock) Recipients() (sa1 []string) {
 	mm_atomic.AddUint64(&mmRecipients.beforeRecipientsCounter, 1)
 	defer mm_atomic.AddUint64(&mmRecipients.afterRecipientsCounter, 1)
 
+	if mmRecipients.inspectFuncRecipients != nil {
+		mmRecipients.inspectFuncRecipients()
+	}
+
 	if mmRecipients.RecipientsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRecipients.RecipientsMock.defaultExpectation.Counter, 1)
 
-		results := mmRecipients.RecipientsMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmRecipients.RecipientsMock.defaultExpectation.results
+		if mm_results == nil {
 			mmRecipients.t.Fatal("No results are set for the MessageMock.Recipients")
 		}
-		return (*results).sa1
+		return (*mm_results).sa1
 	}
 	if mmRecipients.funcRecipients != nil {
 		return mmRecipients.funcRecipients()
@@ -334,6 +367,17 @@ func (mmSender *mMessageMockSender) Expect() *mMessageMockSender {
 	return mmSender
 }
 
+// Inspect accepts an inspector function that has same arguments as the Message.Sender
+func (mmSender *mMessageMockSender) Inspect(f func()) *mMessageMockSender {
+	if mmSender.mock.inspectFuncSender != nil {
+		mmSender.mock.t.Fatalf("Inspect function is already set for MessageMock.Sender")
+	}
+
+	mmSender.mock.inspectFuncSender = f
+
+	return mmSender
+}
+
 // Return sets up results that will be returned by Message.Sender
 func (mmSender *mMessageMockSender) Return(s1 string) *MessageMock {
 	if mmSender.mock.funcSender != nil {
@@ -366,14 +410,18 @@ func (mmSender *MessageMock) Sender() (s1 string) {
 	mm_atomic.AddUint64(&mmSender.beforeSenderCounter, 1)
 	defer mm_atomic.AddUint64(&mmSender.afterSenderCounter, 1)
 
+	if mmSender.inspectFuncSender != nil {
+		mmSender.inspectFuncSender()
+	}
+
 	if mmSender.SenderMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSender.SenderMock.defaultExpectation.Counter, 1)
 
-		results := mmSender.SenderMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSender.SenderMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSender.t.Fatal("No results are set for the MessageMock.Sender")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmSender.funcSender != nil {
 		return mmSender.funcSender()

@@ -6,7 +6,7 @@ import (
 	"net/smtp"
 )
 
-//go:generate go run github.com/gojuno/minimock/cmd/minimock -g -i Sender -s _mock.go
+//go:generate go run github.com/gojuno/minimock/v3/cmd/minimock -g -i Sender -s _mock.go
 
 // Sender is an interface to be implemented by something which is able to
 // Send a Message.
@@ -70,7 +70,7 @@ func (s *SMTPSender) Send(m Message) error {
 // but is left as a configurable function for testing purposes.
 type SendMailFunc func(addr string, a smtp.Auth, from string, to []string, msg []byte) error
 
-//go:generate go run github.com/gojuno/minimock/cmd/minimock -g -i SMTPAuth -s _mock.go
+//go:generate go run github.com/gojuno/minimock/v3/cmd/minimock -g -i SMTPAuth -s _mock.go
 
 // SMTPAuth enables generating mock for smtp.Auth
 type SMTPAuth interface {
