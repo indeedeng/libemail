@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // SMTPAuthMock implements SMTPAuth
@@ -16,11 +16,13 @@ type SMTPAuthMock struct {
 	t minimock.Tester
 
 	funcNext          func(fromServer []byte, more bool) (toServer []byte, err error)
+	inspectFuncNext   func(fromServer []byte, more bool)
 	afterNextCounter  uint64
 	beforeNextCounter uint64
 	NextMock          mSMTPAuthMockNext
 
 	funcStart          func(server *smtp.ServerInfo) (proto string, toServer []byte, err error)
+	inspectFuncStart   func(server *smtp.ServerInfo)
 	afterStartCounter  uint64
 	beforeStartCounter uint64
 	StartMock          mSMTPAuthMockStart
@@ -91,6 +93,17 @@ func (mmNext *mSMTPAuthMockNext) Expect(fromServer []byte, more bool) *mSMTPAuth
 	return mmNext
 }
 
+// Inspect accepts an inspector function that has same arguments as the SMTPAuth.Next
+func (mmNext *mSMTPAuthMockNext) Inspect(f func(fromServer []byte, more bool)) *mSMTPAuthMockNext {
+	if mmNext.mock.inspectFuncNext != nil {
+		mmNext.mock.t.Fatalf("Inspect function is already set for SMTPAuthMock.Next")
+	}
+
+	mmNext.mock.inspectFuncNext = f
+
+	return mmNext
+}
+
 // Return sets up results that will be returned by SMTPAuth.Next
 func (mmNext *mSMTPAuthMockNext) Return(toServer []byte, err error) *SMTPAuthMock {
 	if mmNext.mock.funcNext != nil {
@@ -144,15 +157,19 @@ func (mmNext *SMTPAuthMock) Next(fromServer []byte, more bool) (toServer []byte,
 	mm_atomic.AddUint64(&mmNext.beforeNextCounter, 1)
 	defer mm_atomic.AddUint64(&mmNext.afterNextCounter, 1)
 
-	params := &SMTPAuthMockNextParams{fromServer, more}
+	if mmNext.inspectFuncNext != nil {
+		mmNext.inspectFuncNext(fromServer, more)
+	}
+
+	mm_params := &SMTPAuthMockNextParams{fromServer, more}
 
 	// Record call args
 	mmNext.NextMock.mutex.Lock()
-	mmNext.NextMock.callArgs = append(mmNext.NextMock.callArgs, params)
+	mmNext.NextMock.callArgs = append(mmNext.NextMock.callArgs, mm_params)
 	mmNext.NextMock.mutex.Unlock()
 
 	for _, e := range mmNext.NextMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.toServer, e.results.err
 		}
@@ -160,17 +177,17 @@ func (mmNext *SMTPAuthMock) Next(fromServer []byte, more bool) (toServer []byte,
 
 	if mmNext.NextMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmNext.NextMock.defaultExpectation.Counter, 1)
-		want := mmNext.NextMock.defaultExpectation.params
-		got := SMTPAuthMockNextParams{fromServer, more}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmNext.t.Errorf("SMTPAuthMock.Next got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmNext.NextMock.defaultExpectation.params
+		mm_got := SMTPAuthMockNextParams{fromServer, more}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmNext.t.Errorf("SMTPAuthMock.Next got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmNext.NextMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmNext.NextMock.defaultExpectation.results
+		if mm_results == nil {
 			mmNext.t.Fatal("No results are set for the SMTPAuthMock.Next")
 		}
-		return (*results).toServer, (*results).err
+		return (*mm_results).toServer, (*mm_results).err
 	}
 	if mmNext.funcNext != nil {
 		return mmNext.funcNext(fromServer, more)
@@ -293,6 +310,17 @@ func (mmStart *mSMTPAuthMockStart) Expect(server *smtp.ServerInfo) *mSMTPAuthMoc
 	return mmStart
 }
 
+// Inspect accepts an inspector function that has same arguments as the SMTPAuth.Start
+func (mmStart *mSMTPAuthMockStart) Inspect(f func(server *smtp.ServerInfo)) *mSMTPAuthMockStart {
+	if mmStart.mock.inspectFuncStart != nil {
+		mmStart.mock.t.Fatalf("Inspect function is already set for SMTPAuthMock.Start")
+	}
+
+	mmStart.mock.inspectFuncStart = f
+
+	return mmStart
+}
+
 // Return sets up results that will be returned by SMTPAuth.Start
 func (mmStart *mSMTPAuthMockStart) Return(proto string, toServer []byte, err error) *SMTPAuthMock {
 	if mmStart.mock.funcStart != nil {
@@ -346,15 +374,19 @@ func (mmStart *SMTPAuthMock) Start(server *smtp.ServerInfo) (proto string, toSer
 	mm_atomic.AddUint64(&mmStart.beforeStartCounter, 1)
 	defer mm_atomic.AddUint64(&mmStart.afterStartCounter, 1)
 
-	params := &SMTPAuthMockStartParams{server}
+	if mmStart.inspectFuncStart != nil {
+		mmStart.inspectFuncStart(server)
+	}
+
+	mm_params := &SMTPAuthMockStartParams{server}
 
 	// Record call args
 	mmStart.StartMock.mutex.Lock()
-	mmStart.StartMock.callArgs = append(mmStart.StartMock.callArgs, params)
+	mmStart.StartMock.callArgs = append(mmStart.StartMock.callArgs, mm_params)
 	mmStart.StartMock.mutex.Unlock()
 
 	for _, e := range mmStart.StartMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.proto, e.results.toServer, e.results.err
 		}
@@ -362,17 +394,17 @@ func (mmStart *SMTPAuthMock) Start(server *smtp.ServerInfo) (proto string, toSer
 
 	if mmStart.StartMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmStart.StartMock.defaultExpectation.Counter, 1)
-		want := mmStart.StartMock.defaultExpectation.params
-		got := SMTPAuthMockStartParams{server}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmStart.t.Errorf("SMTPAuthMock.Start got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmStart.StartMock.defaultExpectation.params
+		mm_got := SMTPAuthMockStartParams{server}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmStart.t.Errorf("SMTPAuthMock.Start got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmStart.StartMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmStart.StartMock.defaultExpectation.results
+		if mm_results == nil {
 			mmStart.t.Fatal("No results are set for the SMTPAuthMock.Start")
 		}
-		return (*results).proto, (*results).toServer, (*results).err
+		return (*mm_results).proto, (*mm_results).toServer, (*mm_results).err
 	}
 	if mmStart.funcStart != nil {
 		return mmStart.funcStart(server)

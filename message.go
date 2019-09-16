@@ -2,7 +2,7 @@ package libemail
 
 import "errors"
 
-//go:generate go run github.com/gojuno/minimock/cmd/minimock -g -i Message -s _mock.go
+//go:generate go run github.com/gojuno/minimock/v3/cmd/minimock -g -i Message -s _mock.go
 
 // A Message represents something which can be formatted into an RFC-compatible
 // email document, including headers, text, html, and attachments.
